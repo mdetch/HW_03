@@ -1,173 +1,198 @@
 import java.applet.Applet;
 import java.awt.*;
 import java.awt.event.*;
+ 
+import javax.swing.*;
+import javax.swing.border.TitledBorder;
+import javax.swing.event.*;
 
-public class ScribbleApplet extends Applet{
-	int R,G,B,brushSize;
-	Scrollbar redSlider, greenSlider, blueSlider;
-	Label redValue,greenValue,blueValue,showBrushSize;
-	Button incBrush, decBrush, clear;
+public class ScribbleApplet extends JFrame{
 	
-	public void init(){
-		this.setSize(800,800);
-		R=0; G=0; B=0; brushSize=20;
-		setGUI();
+	JSlider rSlider, gSlider, bSlider;
+	JLabel rLabel, gLabel, bLabel, brushLabel;
+	JButton inc, dec, clear;
+	DrawingPad drawPad;
+	JPanel colorSample;
+
+	public static void main(String [] args){
+		ScribbleApplet mainGUI = new ScribbleApplet();
+		mainGUI.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        mainGUI.setSize(800,800); 
+        mainGUI.setVisible(true);
 	}
 	
-	public void setGUI(){
-		
+	public ScribbleApplet(){
 		setLayout(null);
 		
-		redValue=new Label("Red:"+R); greenValue=new Label("Green:"+G); blueValue=new Label("Blue:"+B);
+		Container pane=this.getContentPane();
+		drawPad = new DrawingPad();
+		drawPad.setBounds(0,130,800,670);
+		pane.add(drawPad);
 		
-		//Slider of 3 colors
-		redSlider = new Scrollbar(Scrollbar.HORIZONTAL, 0, 1, 0, 256);
-		redSlider.addAdjustmentListener(new Scroll());
-		greenSlider = new Scrollbar(Scrollbar.HORIZONTAL, 0, 1, 0, 256);
-		greenSlider.addAdjustmentListener(new Scroll());
-		blueSlider = new Scrollbar(Scrollbar.HORIZONTAL, 0, 1, 0, 256);
-		blueSlider.addAdjustmentListener(new Scroll());
+		//initialize color Labels
+		rLabel = new JLabel("R:"+drawPad.red);
+		gLabel = new JLabel("G:"+drawPad.green);
+		bLabel = new JLabel("B:"+drawPad.blue);
+		brushLabel = new JLabel("Brush Size: "+drawPad.sizeBrush);
 		
-		//setBounds of slider and text
-		redValue.setBounds(2,10,100,20);
-		redSlider.setBounds(80,10,500,20);
-		greenValue.setBounds(2,40,100,20);
-		greenSlider.setBounds(80,40,500,20);
-		blueValue.setBounds(2,70,100,20);
-		blueSlider.setBounds(80,70,500,20);
-		add(redValue);
-		add(redSlider);
-		add(greenValue);
-		add(greenSlider);
-		add(blueValue);
-		add(blueSlider);
+		rLabel.setBounds(5,10,50,30);
+		gLabel.setBounds(5,50,50,30);
+		bLabel.setBounds(5,90,50,30);
+		brushLabel.setBounds(420,10,100,20);
 		
-		//add brush buttons
-		showBrushSize = new Label("Brush Size:"+brushSize);
-		showBrushSize.setBounds(660,25,120,20);
+		//initialize color Sliders
+		rSlider = new JSlider(JSlider.HORIZONTAL, 0, 255, 0);
+		gSlider = new JSlider(JSlider.HORIZONTAL, 0, 255, 0);
+		bSlider = new JSlider(JSlider.HORIZONTAL, 0, 255, 0);
 		
-		//initialize increasing button
-		incBrush = new Button("+");
-		incBrush.addActionListener(new IncBrushSize());
-		incBrush.setBounds(600,25,20,20);
+		rSlider.addChangeListener(new SliderChanged());
+		gSlider.addChangeListener(new SliderChanged());
+		bSlider.addChangeListener(new SliderChanged());
 		
-		//initialize decreasing button
-		decBrush = new Button("-");
-		decBrush.addActionListener(new DecBrushSize());
-		decBrush.setBounds(630,25,20,20);
+		rSlider.setBounds(40,10,300,30);
+		gSlider.setBounds(40,50,300,30);
+		bSlider.setBounds(40,90,300,30);
 		
-		//initialize clear button
-		clear = new Button(" CLEAR ");
+		add(rLabel);
+		add(gLabel);
+		add(bLabel);
+		add(brushLabel);
+		
+		add(rSlider);
+		add(gSlider);
+		add(bSlider);
+		
+		//initialize buttons
+		inc = new JButton("+");
+		dec = new JButton("-");
+		clear = new JButton("Erase All");
+		
+		inc.setBounds(360,10,50,50);
+		dec.setBounds(360,70,50,50);
+		clear.setBounds(700,10,80,110);
+		
+		inc.addActionListener(new IncBrushSize());
+		dec.addActionListener(new DecBrushSize());
 		clear.addActionListener(new ClearScreen());
-		clear.setBounds(600,1,190,20);
 		
-		add(incBrush);
-		add(decBrush);
-		add(clear);
-		add(showBrushSize);
-		
-		drawBrushSample();
-		drawScreen();
-		
+		add(inc);
+		add(dec);
+		add(clear);	
+		colorSample = new JPanel();
+		updateColorSample(0,0,0);
 	}
 	
-	public void drawScreen(){
-		Dimension d = this.getSize();
-		
-		setLayout(null);
-		//create panel for drawing
-		Panel drawScreen = new Panel();
-		drawScreen.setLayout(null);
-		drawScreen.setBackground(Color.WHITE);
-		drawScreen.setBounds(2,100,d.width-4,d.height-105);
-		drawScreen.addMouseMotionListener(new Mouse());
-		add(drawScreen);
+	public void updateColorSample(int r,int g,int b){
+		colorSample.setBounds(420,40,100,80);
+		colorSample.setBackground(new Color(r,g,b));
+		add(colorSample);
 	}
 	
-	public void drawBrushSample(){
-		Graphics g = this.getGraphics();
+	public void updateRGB(int r,int g,int b){
+		drawPad.red = r;
+		drawPad.green = g;
+		drawPad.blue = b;
 		
-		g.setColor(Color.WHITE);
-		g.fillRect(600,50,190,40);
-		g.setColor(Color.BLACK);
-		g.drawOval(695-brushSize/2,70-brushSize/2,brushSize,brushSize);
-		g.setColor(new Color(R,G,B));
-		g.fillOval(695-brushSize/2,70-brushSize/2,brushSize,brushSize);
-		System.out.println(brushSize);
+		rLabel.setText("R:"+r);
+		gLabel.setText("G:"+g);
+		bLabel.setText("B:"+b);
 		
-		
+		updateColorSample(r,g,b);
 	}
 	
-	public void updateColorValue(){
-		redValue.setText("Red:"+R);
-		greenValue.setText("Green:"+G);
-		blueValue.setText("Blue:"+B);
-		drawBrushSample();
-	}
 	
-	public void updateBrushSize(){
-		showBrushSize.setText("Brush Size:"+brushSize);
-		drawBrushSample();
-	}
-	
-	public void drawOnScreen(int x, int y){
-		Graphics g = this.getGraphics();
-		g.setColor(new Color(R,G,B));
-		g.fillOval(x+2,y+100,brushSize,brushSize);
-	}
-		
-	class Scroll implements AdjustmentListener{
-		public void adjustmentValueChanged(AdjustmentEvent arg0) {
-			R=redSlider.getValue();
-			G=greenSlider.getValue();
-			B=blueSlider.getValue();
-			updateColorValue();
-		}
-	}
-	class IncBrushSize implements ActionListener{
-		@Override
-		public void actionPerformed(ActionEvent arg0) {
-			// TODO Auto-generated method stub
-			if(brushSize>=40) {}
-			else{
-				brushSize++;
-				updateBrushSize();
-			}
-		}
-	}
-	class DecBrushSize implements ActionListener{
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			// TODO Auto-generated method stub
-			if(brushSize<=1) {}
-			else{
-				brushSize--;
-				updateBrushSize();
-			}
-		}
-	}
-	class ClearScreen implements ActionListener{
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			// TODO Auto-generated method stub
-			drawScreen();
-		}	
-	}
-	class Mouse implements MouseMotionListener{
+class SliderChanged implements ChangeListener{
 
-		@Override
-		public void mouseDragged(MouseEvent e) {
-			// TODO Auto-generated method stub
-			int x = e.getX();
-			int y = e.getY();
-			if(x>0&&y>0)	drawOnScreen(e.getX(),e.getY());
-			System.out.println(e.getX()+" "+e.getY());
-		}
+	@Override
+	public void stateChanged(ChangeEvent arg0) {
+		// TODO Auto-generated method stub
+		updateRGB(rSlider.getValue(),gSlider.getValue(),bSlider.getValue());
+	}
+	
+}
 
-		@Override
-		public void mouseMoved(MouseEvent e) {
-			// TODO Auto-generated method stub
-			
+class IncBrushSize implements ActionListener{
+
+	@Override
+	public void actionPerformed(ActionEvent arg0) {
+		// TODO Auto-generated method stub
+		if(drawPad.sizeBrush<30){
+			drawPad.sizeBrush++;
+			brushLabel.setText("Brush Size: "+drawPad.sizeBrush);
 		}
 	}
+}
+
+class DecBrushSize implements ActionListener{
+
+	@Override
+	public void actionPerformed(ActionEvent arg0) {
+		// TODO Auto-generated method stub
+		if(drawPad.sizeBrush>1){
+			drawPad.sizeBrush--;
+			brushLabel.setText("Brush Size: "+drawPad.sizeBrush);
+		}
+	}
+}
+
+class ClearScreen implements ActionListener{
+
+	@Override
+	public void actionPerformed(ActionEvent arg0) {
+		// TODO Auto-generated method stub
+		drawPad.clear();
+	}
+}
+	
+class DrawingPad extends JComponent{
+	Image image;
+    Graphics2D graphics2D;
+    int oldX, oldY, currentX, currentY;
+    int red,green,blue;
+    int sizeBrush=10;
+    public DrawingPad() {
+      setDoubleBuffered(false);
+      
+      addMouseListener(new MouseAdapter() {
+        public void mousePressed(MouseEvent e) {
+          oldX = e.getX();
+          oldY = e.getY();
+         
+        }
+      });
+      addMouseMotionListener(new MouseMotionAdapter() {
+        public void mouseDragged(MouseEvent e) {
+          currentX = e.getX();
+          currentY = e.getY();
+         graphics2D.setColor(new Color(red,green,blue));
+         
+          if (graphics2D != null)
+                  graphics2D.setStroke(new BasicStroke(sizeBrush));
+                  graphics2D.drawLine(oldX, oldY, currentX, currentY);
+          repaint();
+          oldX = currentX;
+          oldY = currentY;
+        }
+      });
+    }  
+        public void paintComponent(Graphics g) {
+                 if (image == null) {
+          image = createImage(getSize().width, getSize().height);
+         
+          graphics2D = (Graphics2D) image.getGraphics();
+          graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+              RenderingHints.VALUE_ANTIALIAS_ON);
+          clear();
+        }
+   
+        g.drawImage(image, 0, 0, null);
+      }
+ 
+      public void clear() {
+        graphics2D.setPaint(Color.WHITE);
+        graphics2D.fillRect(0, 0, getSize().width, getSize().height);
+        graphics2D.setPaint(Color.BLACK);
+        repaint();
+      }
+}
 }
